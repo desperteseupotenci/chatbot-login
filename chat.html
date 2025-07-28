@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot - Atendimento Boticário</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .chat-container {
+            width: 90%;
+            max-width: 600px;
+            height: 80vh;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-header {
+            padding: 20px;
+            background: #00a859; /* Cor do Boticário */
+            color: white;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            text-align: center;
+        }
+        .chat-history {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .message {
+            padding: 10px 15px;
+            border-radius: 18px;
+            margin-bottom: 10px;
+            max-width: 75%;
+            line-height: 1.4;
+        }
+        .user-message {
+            background-color: #dcf8c6;
+            align-self: flex-end;
+        }
+        .bot-message {
+            background-color: #e9e9eb;
+            align-self: flex-start;
+        }
+        .chat-input {
+            display: flex;
+            padding: 20px;
+            border-top: 1px solid #ddd;
+        }
+        #message-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            margin-right: 10px;
+        }
+        #send-button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #00a859;
+            color: white;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">
+        <h2>Assistente Virtual de Atendimento</h2>
+    </div>
+    <div class="chat-history" id="chat-history">
+        <div class="message bot-message">Olá! Como posso ajudar você hoje?</div>
+    </div>
+    <div class="chat-input">
+        <input type="text" id="message-input" placeholder="Digite sua pergunta...">
+        <button id="send-button">Enviar</button>
+    </div>
+</div>
+
+<script>
+    const chatHistory = document.getElementById('chat-history');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+
+    // Substitua pela URL de TESTE do seu NOVO workflow de chat
+    const n8nWebhookUrl = 'https://luiztesteautomacao.app.n8n.cloud/webhook-test/f6c75a74-7dd6-4851-ae5a-ee64d8c30557';
+
+    function addMessage(sender, text) {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('message', sender === 'user' ? 'user-message' : 'bot-message');
+        messageElement.textContent = text;
+        chatHistory.appendChild(messageElement);
+        chatHistory.scrollTop = chatHistory.scrollHeight; // Rola para a mensagem mais recente
+    }
+
+    async function sendMessage() {
+        const userMessage = messageInput.value.trim();
+        if (userMessage === '') return;
+
+        addMessage('user', userMessage);
+        messageInput.value = '';
+
+        try {
+            const response = await fetch(n8nWebhookUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ pergunta: userMessage }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro na comunicação com o servidor.');
+            }
+
+            const botResponse = await response.json();
+            addMessage('bot', botResponse);
+
+        } catch (error) {
+            console.error('Erro:', error);
+            addMessage('bot', 'Desculpe, não consegui me conectar. Tente novamente.');
+        }
+    }
+
+    sendButton.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    });
+</script>
+
+</body>
+</html>
