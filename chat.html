@@ -107,34 +107,48 @@
         chatHistory.scrollTop = chatHistory.scrollHeight; // Rola para a mensagem mais recente
     }
 
-    async function sendMessage() {
-        const userMessage = messageInput.value.trim();
-        if (userMessage === '') return;
+async function sendMessage() {
+    const userMessage = messageInput.value.trim();
+    if (userMessage === '') return;
 
-        addMessage('user', userMessage);
-        messageInput.value = '';
+    addMessage('user', userMessage);
+    messageInput.value = '';
 
-        try {
-            const response = await fetch(n8nWebhookUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ pergunta: userMessage }),
-            });
+    console.log("--- INICIANDO NOVA REQUISIÇÃO ---");
+    console.log("1. Enviando pergunta para o n8n:", userMessage);
 
-            if (!response.ok) {
-                throw new Error('Erro na comunicação com o servidor.');
-            }
+    try {
+        const response = await fetch(n8nWebhookUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ pergunta: userMessage }),
+        });
 
-            const botResponse = await response.json();
-            addMessage('bot', botResponse.answer);
+        console.log("2. Resposta recebida do servidor. Status:", response.status);
 
-        } catch (error) {
-            console.error('Erro:', error);
-            addMessage('bot', 'Desculpe, não consegui me conectar. Tente novamente.');
+        if (!response.ok) {
+            throw new Error('A resposta da rede não foi OK. Status: ' + response.status);
         }
+
+        // Primeiro, vamos pegar a resposta como texto puro para garantir que não há erros aqui
+        const responseText = await response.text();
+        console.log("3. Resposta recebida (como texto puro):", responseText);
+
+        console.log("4. Tentando converter o texto para JSON...");
+        const botResponse = JSON.parse(responseText); // Conversão manual
+        console.log("5. Texto convertido para JSON com sucesso:", botResponse);
+
+        console.log("6. Tentando acessar a propriedade 'answer':", botResponse.answer);
+        addMessage('bot', botResponse.answer);
+
+    } catch (error) {
+        console.error("ERRO! O código falhou e caiu no bloco 'catch'.");
+        console.error("O objeto de erro é:", error);
+        addMessage('bot', 'Desculpe, não consegui me conectar. Tente novamente.');
     }
+}
 
     sendButton.addEventListener('click', sendMessage);
     messageInput.addEventListener('keypress', function(event) {
