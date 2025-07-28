@@ -128,7 +128,7 @@
             }
 
             const botResponse = await response.json();
-            addMessage('bot', botResponse[0].answer);
+            addMessage('bot', botResponse.answer);
 
         } catch (error) {
             console.error('Erro:', error);
