@@ -96,66 +96,77 @@
     const messageInput = document.getElementById('message-input');
     const sendButton = document.getElementById('send-button');
 
-    // Substitua pela URL de TESTE do seu NOVO workflow de chat
-    const n8nWebhookUrl = 'https://luiztesteautomacao.app.n8n.cloud/webhook/f6c75a74-7dd6-4851-ae5a-ee64d8c30557';
+    const n8nWebhookUrl = 'https://luiztesteautomacao.app.n8n.cloud/webhook/7af5e176-a243-49d7-af93-eab8aaa4f68d';
+
+    let user = '';
+    let token = '';
+
+    // Função para extrair parâmetros da URL e armazenar
+    function getUserInfo() {
+        const params = new URLSearchParams(window.location.search);
+        user = params.get('usuario');
+        token = params.get('token');
+
+        if (!user || !token) {
+            // Se não houver usuário ou token, bloqueia o chat
+            addMessage('bot', 'Erro de autenticação. Por favor, faça o login novamente.');
+            messageInput.disabled = true;
+            sendButton.disabled = true;
+        }
+    }
 
     function addMessage(sender, text) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message', sender === 'user' ? 'user-message' : 'bot-message');
         messageElement.textContent = text;
         chatHistory.appendChild(messageElement);
-        chatHistory.scrollTop = chatHistory.scrollHeight; // Rola para a mensagem mais recente
+        chatHistory.scrollTop = chatHistory.scrollHeight;
     }
 
-async function sendMessage() {
-    const userMessage = messageInput.value.trim();
-    if (userMessage === '') return;
+    async function sendMessage() {
+        const userMessage = messageInput.value.trim();
+        if (userMessage === '') return;
 
-    addMessage('user', userMessage);
-    messageInput.value = '';
+        addMessage('user', userMessage);
+        messageInput.value = '';
 
-    console.log("--- INICIANDO NOVA REQUISIÇÃO ---");
-    console.log("1. Enviando pergunta para o n8n:", userMessage);
+        try {
+            const response = await fetch(n8nWebhookUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                // Enviando a pergunta, o usuário e o token
+                body: JSON.stringify({
+                    pergunta: userMessage,
+                    usuario: user,
+                    token: token
+                }),
+            });
 
-    try {
-        const response = await fetch(n8nWebhookUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ pergunta: userMessage }),
-        });
+            if (!response.ok) {
+                throw new Error('A resposta da rede não foi OK.');
+            }
 
-        console.log("2. Resposta recebida do servidor. Status:", response.status);
+            const botResponse = await response.json();
+            addMessage('bot', botResponse.answer);
 
-        if (!response.ok) {
-            throw new Error('A resposta da rede não foi OK. Status: ' + response.status);
+        } catch (error) {
+            console.error("ERRO:", error);
+            addMessage('bot', 'Desculpe, não consegui me conectar. Tente novamente.');
         }
-
-        // Primeiro, vamos pegar a resposta como texto puro para garantir que não há erros aqui
-        const responseText = await response.text();
-        console.log("3. Resposta recebida (como texto puro):", responseText);
-
-        console.log("4. Tentando converter o texto para JSON...");
-        const botResponse = JSON.parse(responseText); // Conversão manual
-        console.log("5. Texto convertido para JSON com sucesso:", botResponse);
-
-        console.log("6. Tentando acessar a propriedade 'answer':", botResponse.answer);
-        addMessage('bot', botResponse.answer);
-
-    } catch (error) {
-        console.error("ERRO! O código falhou e caiu no bloco 'catch'.");
-        console.error("O objeto de erro é:", error);
-        addMessage('bot', 'Desculpe, não consegui me conectar. Tente novamente.');
     }
-}
 
+    // Event listeners
     sendButton.addEventListener('click', sendMessage);
     messageInput.addEventListener('keypress', function(event) {
         if (event.key === 'Enter') {
             sendMessage();
         }
     });
+
+    // Chama a função para pegar os dados do usuário ao carregar a página
+    getUserInfo();
 </script>
 
 </body>
